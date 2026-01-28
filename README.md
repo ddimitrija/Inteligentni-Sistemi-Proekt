@@ -6,74 +6,22 @@
 
 1. Учесници : Димитрија Ѓошевски
 
-Индивидуален или проект со 2ца ученици.
+2. Наслов на проектот : Music Taste Discovery Agent (Spotify)
 
-2. Наслов на проектот
+3. Тип на проект : Clustering & Machine Learning
 
-Краток и јасен наслов.
+4. Опис на проектот : This project creates an intelligent music recommendation agent that analyzes Spotify songs using clustering and machine learning. It groups songs based on audio features like tempo, energy, and danceability to detect listening patterns. The agent is designed for Spotify users who want personalized music suggestions tailored to their tastes. Based on the identified clusters, it recommends new songs similar to the user's preferences while allowing some exploration of new styles. This system demonstrates how machine learning can uncover patterns in music and support intelligent, adaptive recommendations.
 
-3. Тип на проект
+5. AI API(и) (ако е применливо) : This project uses Spotify Web API to access real music data and audio features. This allows the agent to analyze songs and make intelligent, personalized recommendations.
 
-Изберете еден од дозволените типови.
+6. Датасет (ако е применливо) : No datasets are used since Spotify Web API provides everything needed.
 
-4. Опис на проектот
-
-Напишете краток резиме (5–8 реченици) во кое ќе објасните:
-
-Што прави проектот
-
-За кого е наменет
-
-Зошто е корисен
-
-5. AI API(и) (ако е применливо)
-
-Наведете кои API-ја ќе ги користите и објаснете зошто.
-
-6. Датасет (ако е применливо)
-
-Open Datasets | Kaggle
-
-Ако проектот користи податоци, објаснете:
-
-Извор на датасетот
-
-Големина и формат
-
-Како ќе го користите
-
-7. Карактеристики на проектот
-
-Опишете најмалку 3 клучни функции кои ќе ги има вашиот проект.
+7. Карактеристики на проектот : Analyze music features, cluster songs or users, recommend songs.
 
 8. Очекуван резултат
-
-Опишете како ќе изгледа конечниот резултат (примерок од излез, слики, одговор од chatbot, итн.)
-
-Типови на Проекти
-
-Пребарување (Search)
-
-Машинско учење (тренинг со податочни множества ако е применливо)
-
-Кластерирање (тренинг со податочни множества ако е применливо)
-
-AI агенти користејќи API (ако е применливо)
-
-API-ја (ако е применливо)
-
-ChatGPT API
-
-Gemini API
-
-Claude API
-
-Perplexity API
-
-NanoBanana API
-
-DeepSeek API
-
-Други AI програмски платформи
-
-На крај овие информации поставете ги на Readme.md во вашиот Github репозиториум.
+Example :
+Detected taste cluster : High-Energy Electronic
+Recommended songs :
+Song A - Artist X
+Song B - Artist Y
+Song C - Artist Z
