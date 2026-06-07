@@ -1,92 +1,132 @@
-from .client import get_spotify_client
+from __future__ import annotations
+
+from pathlib import Path
+
 import pandas as pd
 
+DEFAULT_SOURCE_CSV = Path(__file__).parent / "my_playlist.csv"
+
 AUDIO_FEATURES = [
-    'danceability', 'energy', 'loudness', 'speechiness',
-    'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo'
+    "danceability",
+    "energy",
+    "loudness",
+    "speechiness",
+    "acousticness",
+    "instrumentalness",
+    "liveness",
+    "valence",
+    "tempo",
 ]
 
-def get_playlist_tracks(sp, playlist_id):
-    results = sp.playlist_tracks(playlist_id)
+DEFAULT_FEATURE_COLUMNS = [
+    "danceability",
+    "energy",
+    "loudness",
+    "speechiness",
+    "acousticness",
+    "instrumentalness",
+    "liveness",
+    "valence",
+    "tempo",
+    "popularity",
+    "duration_ms",
+    "explicit",
+    "artist_count",
+    "release_year",
+]
 
-    print("DEBUG FIRST RESPONSE:")
-    print(results)  # 👈 ADD THIS
-
-    tracks = []
-
-    while results:
-        for item in results['items']:
-            track = item.get('track')
-
-            if not track or not track.get('id'):
-                continue
-
-            tracks.append(track)
-
-        results = sp.next(results) if results.get('next') else None
-
-    return tracks
-
-def get_audio_features(sp, tracks):
-    track_ids = [t['id'] for t in tracks if t and t.get('id')]
-
-    all_features = []
-
-    for i in range(0, len(track_ids), 50):
-        batch_ids = track_ids[i:i + 50]
-
-        try:
-            batch = sp.audio_features(batch_ids)
-
-            if batch:
-                all_features.extend([f for f in batch if f is not None])
-
-        except Exception as e:
-            print("Audio features error:", e)
-
-    return all_features
+COLUMN_MAP = {
+    "Track URI": "track_id",
+    "Track Name": "name",
+    "Artist Name(s)": "artist",
+    "Popularity": "popularity",
+    "Duration (ms)": "duration_ms",
+    "Explicit": "explicit",
+    "Release Date": "release_date",
+    "Danceability": "danceability",
+    "Energy": "energy",
+    "Loudness": "loudness",
+    "Speechiness": "speechiness",
+    "Acousticness": "acousticness",
+    "Instrumentalness": "instrumentalness",
+    "Liveness": "liveness",
+    "Valence": "valence",
+    "Tempo": "tempo",
+}
 
 
-def build_dataframe(tracks, audio_features):
-    metadata = {
-        t['id']: {
-            'name': t['name'],
-            'artist': t['artists'][0]['name'],
-            'popularity': t.get('popularity', 0)
-        }
-        for t in tracks if t
-    }
-    print(f"Tracks count: {len(tracks)}")
-    print(f"Audio features count: {len(audio_features)}")
-
-    rows = []
-    for feature in audio_features:
-        track_id = feature['id']
-        if track_id in metadata:
-            row = {'id': track_id}
-            row.update(metadata[track_id])
-            row.update({k: feature.get(k, 0) for k in AUDIO_FEATURES})
-            rows.append(row)
-
-    df = pd.DataFrame(rows).set_index('id')
-    return df
+def _clean_bool(value) -> int:
+    if pd.isna(value):
+        return 0
+    if isinstance(value, bool):
+        return int(value)
+    text = str(value).strip().lower()
+    return int(text in {"true", "1", "yes", "y"})
 
 
-def fetch_playlist(playlist_id):
-    playlist_id = clean_playlist_id(playlist_id)
-    sp = get_spotify_client()
+def _artist_count(value) -> int:
+    if pd.isna(value):
+        return 0
+    artists = [part.strip() for part in str(value).split(",")]
+    artists = [artist for artist in artists if artist]
+    return max(len(artists), 1)
 
-    tracks = get_playlist_tracks(sp, playlist_id)
-    features = get_audio_features(sp, tracks)
-    df = build_dataframe(tracks, features)
 
-    if df.empty:
-        print("No audio features returned")
-        return df, sp   # ✅ ALWAYS return 2 values
+def load_exportify_csv(csv_path: str | Path):
+    """
+    Load an Exportify CSV and return a cleaned dataframe plus usable feature columns.
+    """
+    csv_path = Path(csv_path)
+    if not csv_path.exists():
+        raise FileNotFoundError(
+            f"CSV file not found: {csv_path}\n"
+            "Export your playlist from Exportify and place the file at this path "
+            "or pass --source / --pool on the command line."
+        )
 
-    return df, sp
+    raw = pd.read_csv(csv_path)
 
-def clean_playlist_id(playlist_id):
-    if "playlist/" in playlist_id:
-        return playlist_id.split("playlist/")[1].split("?")[0]
-    return playlist_id
+    rename_map = {source: target for source, target in COLUMN_MAP.items() if source in raw.columns}
+    df = raw[list(rename_map.keys())].rename(columns=rename_map).copy()
+
+    if "track_id" not in df.columns:
+        raise ValueError(
+            f"{csv_path.name} does not contain a Track URI column, so it cannot be used as an Exportify export."
+        )
+
+    df["track_id"] = df["track_id"].astype(str).str.replace("spotify:track:", "", regex=False)
+    df["name"] = df.get("name", "").fillna("").astype(str)
+    df["artist"] = df.get("artist", "").fillna("").astype(str)
+
+    # Extra features derived from the Exportify export
+    df["artist_count"] = raw.get("Artist Name(s)", pd.Series([None] * len(df))).apply(_artist_count)
+    df["release_year"] = pd.to_datetime(raw.get("Release Date"), errors="coerce").dt.year
+
+    if "explicit" in df.columns:
+        df["explicit"] = df["explicit"].apply(_clean_bool)
+    else:
+        df["explicit"] = 0
+
+    numeric_cols = [
+        "popularity",
+        "duration_ms",
+        "explicit",
+        "artist_count",
+        "release_year",
+        *AUDIO_FEATURES,
+    ]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # Drop unusable rows only if the track id or title is missing.
+    df = df[df["track_id"].astype(str).str.len() > 0]
+    df = df[df["name"].astype(str).str.len() > 0]
+
+    df = df.drop_duplicates(subset=["track_id"]).set_index("track_id", drop=False)
+
+    feature_cols = [col for col in DEFAULT_FEATURE_COLUMNS if col in df.columns]
+    if not feature_cols:
+        raise ValueError(f"No usable numeric features found in {csv_path.name}.")
+
+    return df, feature_cols
