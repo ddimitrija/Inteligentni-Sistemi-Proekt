@@ -24,3 +24,23 @@ Recommended songs :
 Song A - Artist X
 Song B - Artist Y
 Song C - Artist Z
+
+## Running the Project
+
+**Install dependencies:**
+```bash
+pip install -r requirements.txt
+```
+
+**Run with your own playlist:**
+
+Export any Spotify playlist as a CSV from [Exportify](https://exportify.net), place it in `spotify/`, then:
+```bash
+python main.py --source spotify/yourplaylist.csv
+```
+
+On first run the reference cache will be built automatically — this takes ~10 seconds and only happens once.
+
+**Output files are written to the project folder:**
+- `recommendation_report.html` — open in any browser
+- `recommendations.csv` — flat table of recommended tracks
