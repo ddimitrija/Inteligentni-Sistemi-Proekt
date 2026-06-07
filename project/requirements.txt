@@ -1,4 +1,4 @@
-spotipy
-python-dotenv
 pandas
 scikit-learn
+python-dotenv
+joblib
